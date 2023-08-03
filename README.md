@@ -5,6 +5,7 @@
   <p align="center">
 	<a href="https://github.com/axonweb3/axon/releases"><img src="https://img.shields.io/github/v/release/axonweb3/axon?sort=semver"></a>
     <a href = "https://hub.docker.com/r/axonweb3/axon/tags"><img src = "https://img.shields.io/docker/pulls/axonweb3/axon"></a>
+<a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fyangby-cryptape%2Faxon?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fyangby-cryptape%2Faxon.svg?type=shield"/></a>
     <a href="https://github.com/axonweb3/axon/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg"></a>
     <a href="https://github.com/axonweb3/axon"><img src="https://github.com/axonweb3/axon/actions/workflows/web3_compatible.yml/badge.svg?branch=main"></a>
     <a href="https://github.com/axonweb3/axon"><img src="https://img.shields.io/github/contributors/axonweb3/axon"></a>
@@ -16,6 +17,9 @@
 </p>
 
 > Axon is still in active development.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fyangby-cryptape%2Faxon.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fyangby-cryptape%2Faxon?ref=badge_large)
 
 ## What is Axon
 
