@@ -22,6 +22,7 @@ impl Migrate {
     pub fn new() -> Self {
         let mut migrations = migrations::Migrations::new();
         migrations.push(Box::new(migrations::DefaultMigration::new(INIT_DB_VERSION)));
+        migrations.push(Box::new(migrations::SaveGenesisReceipts));
         Self { migrations }
     }
 

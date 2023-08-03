@@ -12,6 +12,10 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
 use common_config_parser::types::Config;
 use protocol::{async_trait, traits::VersionedStorage as _, types::RichBlock, ProtocolError};
 
+mod save_genesis_receipts;
+
+pub(crate) use self::save_genesis_receipts::SaveGenesisReceipts;
+
 const NO_VERSION: &str = "00000000000000";
 
 /// A single migration.

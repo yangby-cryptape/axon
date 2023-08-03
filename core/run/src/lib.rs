@@ -52,6 +52,7 @@ use protocol::{
 };
 
 use core_api::{jsonrpc::run_jsonrpc_server, DefaultAPIAdapter};
+use core_consensus::engine::generate_receipts_and_logs;
 use core_consensus::message::{
     ChokeMessageHandler, ProposalMessageHandler, PullBlockRpcHandler, PullProofRpcHandler,
     PullTxsRpcHandler, QCMessageHandler, RemoteHeightMessageHandler, VoteMessageHandler,
@@ -287,14 +288,16 @@ impl Axon {
         storage: &Arc<ImplStorage<RocksAdapter>>,
     ) -> ProtocolResult<()> {
         let trie_db = self.init_trie_db(false).await?;
-        let mut mpt = MPTTrie::new(Arc::clone(&trie_db));
-
-        insert_accounts(&mut mpt, &self.config.accounts).await?;
+        let state_root = {
+            let mut mpt = MPTTrie::new(Arc::clone(&trie_db));
+            insert_accounts(&mut mpt, &self.config.accounts)?;
+            mpt.commit()?
+        };
 
         let path_metadata = self.config.data_path_for_system_contract();
         let resp = execute_transactions(
             &self.genesis,
-            &mut mpt,
+            state_root,
             &trie_db,
             storage,
             path_metadata,
@@ -313,7 +316,7 @@ impl Axon {
 
         log::info!("The genesis block is created {:?}", self.genesis.block);
 
-        save_block(storage, &self.genesis).await?;
+        save_block(storage, &self.genesis, &resp).await?;
 
         Ok(())
     }
@@ -341,14 +344,16 @@ impl Axon {
             )?;
             Arc::new(trie_db)
         };
-        let mut mpt = MPTTrie::new(Arc::clone(&trie_db));
-
-        insert_accounts(&mut mpt, &self.config.accounts).await?;
+        let state_root = {
+            let mut mpt = MPTTrie::new(Arc::clone(&trie_db));
+            insert_accounts(&mut mpt, &self.config.accounts)?;
+            mpt.commit()?
+        };
 
         let path_metadata = tmp_dir.path().join("metadata");
         let resp = execute_transactions(
             &self.genesis,
-            &mut mpt,
+            state_root,
             &trie_db,
             &storage,
             path_metadata,
@@ -1146,7 +1151,7 @@ where
     }
 }
 
-async fn insert_accounts(
+pub(crate) fn insert_accounts(
     mpt: &mut MPTTrie<RocksTrieDB>,
     accounts: &[InitialAccount],
 ) -> ProtocolResult<()> {
@@ -1163,9 +1168,9 @@ async fn insert_accounts(
     Ok(())
 }
 
-async fn execute_transactions<S, DB>(
+pub(crate) async fn execute_transactions<S, DB>(
     rich: &RichBlock,
-    mpt: &mut MPTTrie<RocksTrieDB>,
+    state_root: H256,
     trie_db: &Arc<DB>,
     storage: &Arc<S>,
     path_metadata: PathBuf,
@@ -1177,7 +1182,7 @@ where
 {
     let executor = AxonExecutor::default();
     let mut backend = AxonExecutorAdapter::from_root(
-        mpt.commit()?,
+        state_root,
         Arc::clone(trie_db),
         Arc::clone(storage),
         Proposal::new_without_state_root(&rich.block.header).into(),
@@ -1199,7 +1204,7 @@ where
     Ok(resp)
 }
 
-async fn save_block<S>(storage: &Arc<S>, rich: &RichBlock) -> ProtocolResult<()>
+async fn save_block<S>(storage: &Arc<S>, rich: &RichBlock, resp: &ExecResp) -> ProtocolResult<()>
 where
     S: Storage + 'static,
 {
@@ -1211,6 +1216,18 @@ where
         .await?;
     storage
         .insert_transactions(Context::new(), rich.block.header.number, rich.txs.clone())
+        .await?;
+
+    let (receipts, _logs) = generate_receipts_and_logs(
+        rich.block.header.number,
+        rich.block.header.hash(),
+        rich.block.header.state_root,
+        &rich.txs,
+        resp,
+    );
+
+    storage
+        .insert_receipts(Context::new(), rich.block.header.number, receipts)
         .await?;
 
     Ok(())
